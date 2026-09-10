@@ -1,0 +1,22 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {initialState,loadState,samples,exactDuplicate,similarDuplicate,addItem,matchItem,recommendation,saveFavorite,deleteItem,validateUpload,validItem} from '../domain.mjs';
+test('seed has two clothes, not the entire closet',()=>assert.equal(initialState().wardrobe.length,2));
+test('empty wardrobe still supports recommendations',()=>assert.equal(recommendation(samples[0],'日常休闲').pants.category,'裤子'));
+test('initial state returns independent copies',()=>{const a=initialState();a.wardrobe[0].name='changed';assert.notEqual(initialState().wardrobe[0].name,'changed')});
+test('exact duplicate reuses item without inserting',()=>{let s=initialState();let r=addItem(s,{...samples[0],id:'new'});assert.equal(r.added,false);assert.equal(r.state.wardrobe.length,2);assert.equal(r.item.id,'sample-top')});
+test('similar labels do not prove identity',()=>{const x={...samples[0],id:'new',image:'data:image/jpeg;base64,YWJj'};assert.ok(similarDuplicate(initialState().wardrobe,x));assert.equal(exactDuplicate(initialState().wardrobe,x),undefined)});
+test('different photo can be explicitly added',()=>{let x={...samples[0],id:'new',image:'data:image/jpeg;base64,YWJj'};assert.equal(addItem(initialState(),x).state.wardrobe.length,3)});
+test('matching uses category color type and fit',()=>{assert.equal(matchItem(initialState().wardrobe,samples[1]).id,'sample-jeans');assert.equal(matchItem(initialState().wardrobe,{...samples[1],color:'黑色'}),undefined)});
+test('reference footwear does not become owned',()=>{const s=initialState();const r=recommendation(samples[0],'日常休闲');assert.equal(matchItem(s.wardrobe,r.shoes),undefined);assert.equal(s.wardrobe.length,2)});
+test('invalid top or scene intentionally rejected',()=>{assert.throws(()=>recommendation(samples[1],'日常休闲'));assert.throws(()=>recommendation(samples[0],'fake'))});
+test('user confirmed tags reach recommendation',()=>assert.match(recommendation({...samples[0],color:'黑色'},'日常休闲').reason,/黑色/));
+test('two demo alternatives differ in fit',()=>assert.notEqual(recommendation(samples[0],'日常休闲',0).pants.fit,recommendation(samples[0],'日常休闲',1).pants.fit));
+test('scene influences guidance',()=>assert.match(recommendation(samples[0],'轻松通勤').tip,/正式/));
+test('favorites deduplicate and preserve snapshots',()=>{let r=recommendation(samples[0],'日常休闲');let s=saveFavorite(initialState(),r);assert.equal(saveFavorite(s,r).favorites.length,1);r.top.name='changed';assert.notEqual(s.favorites[0].top.name,'changed')});
+test('deletion preserves favorite but removes owned status',()=>{const s=deleteItem(saveFavorite(initialState(),recommendation(samples[0],'日常休闲')),'sample-jeans');assert.equal(s.favorites.length,1);assert.equal(matchItem(s.wardrobe,s.favorites[0].pants),undefined)});
+test('valid persisted data survives reload',()=>{const s=saveFavorite(initialState(),recommendation(samples[0],'日常休闲'));assert.deepEqual(loadState(JSON.stringify(s)),s)});
+test('corrupt storage recovers safe seed',()=>{for(const s of ['broken','null','{}','{"version":1,"wardrobe":[null],"favorites":[]}'])assert.deepEqual(loadState(s),initialState())});
+test('invalid stored favorites filtered',()=>{const s=initialState();s.favorites=[{id:'bad'}];assert.equal(loadState(JSON.stringify(s)).favorites.length,0)});
+test('unsafe photo schemes rejected',()=>{assert.equal(validItem({...samples[0],image:'javascript:alert(1)'}),false);assert.throws(()=>addItem(initialState(),{id:'bad'}))});
+test('upload validates type size and empty input',()=>{assert.equal(validateUpload({type:'image/jpeg',size:1}),true);assert.throws(()=>validateUpload({type:'image/heic',size:1}));assert.throws(()=>validateUpload({type:'image/png',size:11*1024*1024}));assert.throws(()=>validateUpload({type:'image/png',size:0}));assert.throws(()=>validateUpload(null))});
+

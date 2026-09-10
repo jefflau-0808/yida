@@ -1,0 +1,4 @@
+import http from 'node:http';import {readFile} from 'node:fs/promises';import {resolve,extname} from 'node:path';
+const root=resolve(process.argv[2]||'.');const mime={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.json':'application/json'};
+http.createServer(async(req,res)=>{try{const p=resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));if(!p.startsWith(root))throw Error();const data=await readFile(p.endsWith(root)?resolve(root,'index.html'):p);res.writeHead(200,{'Content-Type':mime[extname(p)]||'text/html; charset=utf-8','Cache-Control':'no-cache'});res.end(data)}catch{res.writeHead(404);res.end('Not found')}}).listen(4173,'127.0.0.1',()=>console.log('Local: http://127.0.0.1:4173'));
+
