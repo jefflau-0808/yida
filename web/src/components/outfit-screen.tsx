@@ -18,19 +18,23 @@ function ItemCard({
   item,
   garments,
   variant,
+  mock,
   onAddSimilar,
 }: {
   item: RecommendationItem;
   garments: GarmentView[];
   variant: number;
+  mock: boolean;
   onAddSimilar: (category: "bottom" | "shoes") => void;
 }) {
   const matched = matchedGarment(garments, item);
   const matchLabel = item.match === "owned"
-    ? "衣柜已有"
-    : item.match === "similar"
-      ? "衣柜有相似款"
-      : "AI 搭配参考";
+      ? "衣柜已有"
+      : item.match === "similar"
+        ? "衣柜有相似款"
+        : mock
+          ? "AI 搭配参考"
+          : "本地占位参考";
   const imageUrl = matched?.imageUrl ?? fallbackImage(item, variant);
 
   return (
@@ -123,7 +127,7 @@ export function OutfitScreen({
             <span>＋</span><div className="placeholder-garment">裤装</div><span>＋</span><div className="placeholder-garment">鞋子</div>
           </div>
           <h2>从这件上衣出发，完成整套搭配</h2>
-          <p>当前为模拟 AI：用于验证完整界面、衣柜匹配与操作流程，不代表真实模型效果。</p>
+          <p>系统会根据当前配置生成建议，并在结果中明确标注真实或模拟 AI；参考图不会冒充衣柜实物。</p>
           {error ? <Notice tone="warning">{error}</Notice> : null}
           <Button onClick={onRecommend} disabled={recommending}>
             {recommending ? <Spinner label="正在生成文字建议" /> : <><Sparkles size={18} /> 生成搭配</>}
@@ -136,7 +140,7 @@ export function OutfitScreen({
             <figure className="outfit-board">
               <figcaption>
                 <span>整套搭配示意</span>
-                <strong>{imageStatus === "succeeded" ? "模拟组合已就绪" : imageStatus === "failed" ? "示意加载失败" : "正在组合"}</strong>
+                <strong>{imageStatus === "succeeded" ? (recommendation.mock ? "模拟组合已就绪" : "本地参考拼图") : imageStatus === "failed" ? "示意加载失败" : "正在组合"}</strong>
               </figcaption>
               <div className="outfit-board__canvas" data-testid="outfit-visual">
                 <div className="board-label board-label--top">01 / 上衣</div>
@@ -147,7 +151,9 @@ export function OutfitScreen({
                 <img className="board-shoes" src={shoesImage} alt={`鞋子：${recommendation.shoes.name}`} />
                 <span className="board-dot" aria-hidden="true" />
               </div>
-              <p><Sparkles size={15} aria-hidden="true" /> 模拟整套搭配示意，非实物商品或试穿保证。</p>
+              <p><Sparkles size={15} aria-hidden="true" /> {recommendation.mock
+                ? "模拟整套搭配示意，非实物商品或试穿保证。"
+                : "文字建议来自真实 AI；当前图片仍为本地占位参考，尚未调用生图服务。"}</p>
             </figure>
 
             <aside className="outfit-copy">
@@ -155,13 +161,15 @@ export function OutfitScreen({
               <h2>搭配思路</h2>
               <p>{recommendation.reason}</p>
               <div className="styling-tip"><strong>穿法小提示</strong><span>{recommendation.tip}</span></div>
-              <p className="mock-badge">模拟 AI 推荐 · 数据仅用于产品体验</p>
+              <p className="mock-badge">{recommendation.mock
+                ? "模拟 AI 推荐 · 数据仅用于产品体验"
+                : "真实 AI 文字推荐 · 请按实际穿着确认"}</p>
             </aside>
           </div>
 
           <div className="recommendation-list">
-            <ItemCard item={recommendation.bottom} garments={garments} variant={recommendation.variant} onAddSimilar={onAddSimilar} />
-            <ItemCard item={recommendation.shoes} garments={garments} variant={recommendation.variant} onAddSimilar={onAddSimilar} />
+            <ItemCard item={recommendation.bottom} garments={garments} variant={recommendation.variant} mock={recommendation.mock} onAddSimilar={onAddSimilar} />
+            <ItemCard item={recommendation.shoes} garments={garments} variant={recommendation.variant} mock={recommendation.mock} onAddSimilar={onAddSimilar} />
           </div>
 
           <div className="result-actions">

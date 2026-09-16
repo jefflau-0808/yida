@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { AiProviderError } from "@/lib/ai/provider";
 import {
   recommendRequestSchema,
   recommendResponseSchema,
@@ -32,7 +33,16 @@ export async function POST(request: NextRequest) {
       requestId,
     );
   }
-  const result = recommendResponseSchema.safeParse(await provider.recommendOutfit(parsed.data));
+  let providerResult: unknown;
+  try {
+    providerResult = await provider.recommendOutfit(parsed.data);
+  } catch (error) {
+    if (error instanceof AiProviderError) {
+      return apiError(error.status, error.code, error.message, requestId, error.retryable);
+    }
+    return apiError(503, "AI_UNAVAILABLE", "搭配推荐暂时不可用", requestId, true);
+  }
+  const result = recommendResponseSchema.safeParse(providerResult);
   if (!result.success) {
     return apiError(502, "INVALID_PROVIDER_OUTPUT", "推荐结果格式不正确", requestId, true);
   }

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { AiProviderError } from "@/lib/ai/provider";
 import { getAiProvider } from "@/lib/server/ai-provider";
 import { allowRequest } from "@/lib/server/rate-limit";
 import { apiError, privateJson } from "@/lib/server/responses";
@@ -43,6 +44,13 @@ export async function POST(request: NextRequest) {
       requestId,
     );
   }
-  const result = await provider.analyzeGarment(image);
-  return privateJson({ ...result, requestId });
+  try {
+    const result = await provider.analyzeGarment(image);
+    return privateJson({ ...result, requestId });
+  } catch (error) {
+    if (error instanceof AiProviderError) {
+      return apiError(error.status, error.code, error.message, requestId, error.retryable);
+    }
+    return apiError(503, "AI_UNAVAILABLE", "衣物识别暂时不可用", requestId, true);
+  }
 }

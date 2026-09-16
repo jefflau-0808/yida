@@ -11,3 +11,15 @@ export interface AiProvider {
   analyzeGarment(image: File): Promise<GarmentAnalysis>;
   recommendOutfit(request: RecommendRequest): Promise<unknown>;
 }
+
+export class AiProviderError extends Error {
+  constructor(
+    message: string,
+    readonly code: string,
+    readonly status: number,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+    this.name = "AiProviderError";
+  }
+}

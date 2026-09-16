@@ -249,8 +249,14 @@ export function YidaApp() {
       }
       setRecommendation(next);
       setPreviousKeys((keys) => [...keys, key].slice(-8));
-      setImageStatus("queued");
-      void runImageJob(next, version, key);
+      if (next.mock) {
+        setImageStatus("queued");
+        void runImageJob(next, version, key);
+      } else {
+        // Real image generation is a separate, budgeted M3 capability. Until it is
+        // enabled, the result board uses clearly labelled local reference assets.
+        setImageStatus("succeeded");
+      }
     } catch (nextError) {
       if (version === requestVersion.current) setError(nextError instanceof Error ? nextError.message : "推荐暂时不可用");
     } finally {

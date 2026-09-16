@@ -44,4 +44,18 @@ describe("搭配结果", () => {
     expect(screen.getAllByText("AI 搭配参考")).toHaveLength(2);
     expect(screen.queryByText("衣柜已有")).not.toBeInTheDocument();
   });
+
+  it("真实文字推荐会明确说明图片仍是本地占位参考", () => {
+    render(
+      <OutfitScreen
+        top={SAMPLE_TOP} garments={[]} scene="daily" recommendation={{ ...recommendation, mock: false }} recommending={false}
+        imageStatus="succeeded" saved={false} onSceneChange={vi.fn()} onRecommend={vi.fn()} onAnother={vi.fn()}
+        onFavorite={vi.fn()} onBack={vi.fn()} onAddSimilar={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("真实 AI 文字推荐 · 请按实际穿着确认")).toBeInTheDocument();
+    expect(screen.getByText("文字建议来自真实 AI；当前图片仍为本地占位参考，尚未调用生图服务。")).toBeInTheDocument();
+    expect(screen.getAllByText("本地占位参考")).toHaveLength(2);
+    expect(screen.queryByText("模拟 AI 推荐 · 数据仅用于产品体验")).not.toBeInTheDocument();
+  });
 });
